@@ -667,7 +667,7 @@ abline(a = 0 , b = 1 , col = "red")
 #2
 plot(linear_mod$residuals ~ scaled_train$critical_temp , pch = 19 , 
 ylab = "residuals" , xlab = "observed critical temp (K)")
-ablie(h = 0 , lty = 2)
+abline(h = 0 , lty = 2)
 #3
 hist(linear_mod$residuals , col = 'grey' , freq = F , xlab = 'Residuals' , main = "")
 
@@ -689,5 +689,26 @@ for(i in 1 : sample_random_num)
 
 print("full mse")
 print(mean(mse))
+
+###Deuxieme methode###
+#resultat moyen que vous esayer dameliorer en metant des splines 
+# resultat avec les splines a montrer aussi a la class par ex 
+# resultats pas fous non pus peut faire mieux 
+# comment c est fortement lineaireon peut quitter lapproche modele 
+# faire par ex des foret aleatoire
+# qui peuvent etre utilise pour faire aussi de la regressin
+
+##### Troisieme methode #####
+library(ranger)
+
+#modele foret aleatoire
+num_trees <- 100 
+randForest = ranger(critical_temp ~ . , data = scaled_train, mtry = 10 , min.node.size = 1 , 
+                    num.trees = num_trees , importance = "permutation")
+# quelque reprensation des resultat 
+#1
+plot(randForest$predictions ~ scaled_train$critical_temp, pch = 19,
+     ylab = "predicted critical temperature (K)" , xlab="Observed critical temperatures (K)" )
+abline(a = 0 , b = 1 , col = "red")
 
 
