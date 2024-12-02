@@ -711,4 +711,29 @@ plot(randForest$predictions ~ scaled_train$critical_temp, pch = 19,
      ylab = "predicted critical temperature (K)" , xlab="Observed critical temperatures (K)" )
 abline(a = 0 , b = 1 , col = "red")
 
+#2
+rf_residuals=scaled_train$critical_temp-randforest$predictions
+plot(rf_residuals ~train$critical_temp, pch = 19,
+     ylab = "Residuals(Obs-Pred)" , xlab="Observed critical temperatures (K)" )
+abline(h=0 ,lty=2)
+#3
+hist(rf_residuals,   col = "grey", freq = FALSE,  xlab = "Residuals", main = "")
+#c'est mieux ! maintenant c'est bcp bcp plus long...
+#si on ajoute la validation croisée dessous ça devient vraiment long!
+mse_rf <- c()
+for (i in 1:sample_random_num)
+(
+ index_for_test_data=sample(1:nrpw(scaled_train),size=sample_size)
+ tmp_test=scaled_train[index_for_test_data,]
+ tmp_train=scaled_train[-index_for_test_data,])
+ tmp_model= ranger(critical_temp ~., data=tmp_train,mtr=10,num.trees =num_trees,importance="permutation",min.node.size = 1)
+ tmp=predict(randforest,tmp_test[,1:81])
+ tmp_y=tmp$predictions
+ mse_rf<-c(i,mse_rf[i]))
+ print(c(i,mse_rf[i]))
+ }
+print("full mse ~ RF : ")
+print(mean(mse_rf))
+ 
+
 
