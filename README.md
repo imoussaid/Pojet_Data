@@ -734,6 +734,32 @@ for (i in 1:sample_random_num)
  }
 print("full mse ~ RF : ")
 print(mean(mse_rf))
- 
+
+#quatrieme approche 
+#on peut utiliser les forets que sur les premieres composante
+#ACP 
+n<-5 #a choisir ce nombre 
+tab_train_wth_critical_temp= scaled_train[,1:81]
+ACP_train<-PCA(tab_train_wth_critical_temp,graph=FALSE,ncp=ncp)
+#construire les ncp nouvelles composantes dans un data frame 
+ACP_dim<-as.numeric(ACP_train$var$cor[,1])
+ACP_scaled_train<-data.frame(apply(scaled_train*ACP_dim,1,sum))
+colnames(ACP_scaled_train)<-c(paste(c("dim",i),collapse = ""))
+
+for (i in 2:n)
+(
+  ACP_dim<-as.numeric(ACP_train$var$cor[,i])
+  temp_df<-scale_it(appply(scaled_train*ACP_dim,1,sum))
+  ACP_scaled_train<-cbind(ACP_scaled_train,temp_df)
+  colnames(ACP_scaled_train)[i]<-c(paste(c("dim",i), collapse = ""))
+)
+
+ACP_scaled_train<- cbind(ACP_scaled_train,scaled_train$critical_temp)
+colnames(ACP_scaled_train)[n+1]<-c("critical_temp")
+
+nb_trees<-100
+mtry<-min(n,10)
+randforest_after_ACP= ranger(critical_temp ~., data=ACP_scaled_train, mtry=mtry, min.node.size -1,
+                             num.trees= nb_trees,importance="permutation")
 
 
