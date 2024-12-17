@@ -117,13 +117,12 @@ abline(h = 0 , lty = 2)
 hist(spline_mod$residuals , col = 'grey' , freq = F , xlab = 'Residuals' , main = "")
   
   
-  
+  # Prédictions sur l'ensemble de test
   predictions_spline <- predict(spline_mod, newdata = scaled_test)
-
+  # Affichage des premières prédictions
   head(predictions_spline)
 
-  
-# Validation du modèle par validation croisée
+  # --- Validation croisée pour évaluer le modèle avec spline ---
   mse_spline <- c()
   
   for(i in 1 : sample_random_num)
@@ -139,6 +138,8 @@ hist(spline_mod$residuals , col = 'grey' , freq = F , xlab = 'Residuals' , main 
   
   cat("MSE pour le modèle avec spline :", mean(mse_spline), "\n") 
 
+  
+  #--------------------------- Modèle Multivariables--------------------------------------   
 # Selection de variables (en utilisant TOUTES les variables) "méthode backward"
 fullLinearReg <- lm(critical_temp~., data=scaled_train)
 back <- step(fullLinearReg, direction="backward", trace = 1)
@@ -156,8 +157,11 @@ formula(back)
 
 summary(fullLinearReg)
 
+# Prédictions sur l'ensemble de test
 predictions_mlt <- predict(fullLinearReg, newdata = scaled_test)
 head(predictions_mlt)
+
+# --- Validation croisée pour évaluer le modèle en utilisant toutes les variables ---
 mse_mlt <- c()
 
 for(i in 1 : sample_random_num)
@@ -175,7 +179,7 @@ cat("MSE pour apres une regression multiple:", mean(mse_mlt), "\n")
 
 
 
---------------------------- Modèle foret aleatoire-------------------------------------- 
+#--------------------------- Modèle foret aleatoire-------------------------------------- 
 
 
 start_time <- Sys.time()  # Temps de début
@@ -184,19 +188,19 @@ num_trees <- 81
 randForest = ranger(critical_temp ~ . , data = scaled_train, mtry = num_trees , min.node.size = 1 , 
                     num.trees = num_trees , importance = "permutation")
 # Représentation des résultats 
-#1
+# Prédictions vs observations
 
 plot(randForest$predictions ~ scaled_train$critical_temp, pch = 19,
      ylab = "predicted critical temperature (K)" , xlab="Observed critical temperatures (K)" )
 abline(a = 0 , b = 1 , col = "red")
 
-#2
+# Résidus vs observations
 
 rf_residuals=scaled_train$critical_temp-randForest$predictions
 plot(rf_residuals ~ scaled_train$critical_temp, pch = 19,
      ylab = "Residuals (Obs-Pred)", xlab = "Observed critical temperatures (K)")
 abline(h=0 ,lty=2)
-#3
+# Histogramme des résidus
 
 hist(rf_residuals,   col = "grey", freq = FALSE,  xlab = "Residuals", main = "")
 
@@ -206,7 +210,8 @@ predictions_rf <- predict(randForest, data = scaled_test)$predictions
 # Afficher les premières prédictions
 head(predictions_rf)
 
-# calcul de la mse
+
+# --- Validation croisée pour évaluer le modèle random forest ---
 mse_rf <- c()
 for(i in 1:sample_random_num)
 {
@@ -234,19 +239,20 @@ end_time <- Sys.time()
 execution_time <- end_time - start_time
 print(paste("Temps d'exécution pour random forest sans acp:", execution_time))
 
+## mse interessante sauf que temps de calcul trop eleve (superieure à 1mn) que faire?
 
 
 
---------------------------- Modèle foret aleatoire avec ACP -------------------------------------- 
+
+#--------------------------- Modèle foret aleatoire avec ACP -------------------------------------- 
 
 
-# Application de l'ACP 
+
 start_time <- Sys.time()  # Temps de début
 
-n<-5 #a choisir ce nombre 
-scaled_train_without_critical_temp= scaled_train[,1:81]
-ACP_train<-PCA(scaled_train_without_critical_temp,graph=FALSE,ncp=n)
-#construire les ncp nouvelles composantes dans un data frame 
+n<-5 
+ACP_train<-PCA(scaled_train[,1:81],graph=FALSE,ncp=n)
+# construction de l'ACP pour les données train 
 ACP_dim<-as.numeric(ACP_train$var$cor[,1])
 ACP_scaled_train<-data.frame(apply(scaled_train*ACP_dim,1,sum))
 colnames(ACP_scaled_train)<-c(paste(c("dim",1),collapse = ""))
@@ -267,7 +273,7 @@ mtry<-min(n,10)
 randforest_after_ACP= ranger(critical_temp ~ ., data=ACP_scaled_train, mtry=mtry, min.node.size = 1,
                              num.trees= nb_trees,importance="permutation")
 
-# Calcul de la mse
+# --- Validation croisée pour évaluer le modèle random forest avec ACP---
 mse_ACPrf <- c()
 for(i in 1:sample_random_num)
 {
@@ -282,16 +288,23 @@ for(i in 1:sample_random_num)
   print(c(i,mse_ACPrf[i]))
 }
 cat("MSE pour le modèle ACP avec forêts aléatoires :", mean(mse_ACPrf), "\n")
-end_time <- Sys.time()  
 
+
+end_time <- Sys.time()  
 # Calcul du temps d'exécution
 execution_time <- end_time - start_time
-
 print(paste("Temps d'exécution pour randomforest after acp:", execution_time))
+
+## augmentation de la mse ce qui est attendus sauf que net amélioration du temps de calcul (inferieure à 30s) 
+
+
+######################Validation du choix ACP+randomForest ############################
+## excecution du code pour creer un fichier .csv de critical_temp sur les données test 
+
 
 
 ACP_test<-PCA(scaled_test,graph=FALSE,ncp=n)
-#construire les ncp nouvelles composantes dans un data frame 
+
 ACP_dim<-as.numeric(ACP_test$var$cor[,1])
 ACP_scaled_test<-data.frame(apply(scaled_test*ACP_dim,1,sum))
 colnames(ACP_scaled_test)<-c(paste(c("dim",1),collapse = ""))
