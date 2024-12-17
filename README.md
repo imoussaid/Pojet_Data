@@ -1,124 +1,123 @@
-# Configuration de l'environnement de travail et chargement des bibliothèques
+# Configuration de l'environnement de travail et chargement des bibliothèques nécessaires
+# On commence par définir le répertoire de travail et charger les bibliothèques utiles pour les analyses.
 setwd("/net/netud/m/imoussaid/S7/Data/Data/code/")
-library(class)          # Pour k-NN
-library(caret)          # Pour l'évaluation
-library(ROCR)           # Pour ROC et AUC
-library(FactoMineR)     # Pour ACP
-library(corrplot)       # Pour visualisation des corrélations
-library(MASS)           # Pour la régression
-library(pls)            # Pour régression PLS
+library(class)          # Pour k-NN (k-nearest neighbors)
+library(caret)          # Pour évaluation des modèles et validation croisée
+library(ROCR)           # Pour construire des courbes ROC et calculer l'AUC
+library(FactoMineR)     # Pour réaliser une analyse en composantes principales (ACP)
+library(corrplot)       # Pour visualiser les matrices de corrélation
+library(MASS)           # Pour la régression et autres analyses statistiques
+library(pls)            # Pour la régression PLS (Partial Least Squares)
 library(splines)        # Pour les splines dans les modèles de régression
-library("FactoMineR")
-library(PCAmixdata)
-library(GGally)        # Pour la correlation
-library(ranger)        # Pour Random forest
-
+library("FactoMineR")   # Chargement redondant (possiblement à supprimer)
+library(PCAmixdata)     # Pour ACP mixte (variables continues et catégoriques)
+library(GGally)         # Pour des visualisations des corrélations
+library(ranger)         # Pour l'algorithme de Random Forest
 
 # Suppression des variables et graphiques
 rm(list = ls(all = TRUE))
 graphics.off()
 
-# 1. Chargement des données d'entraînement et de test
+# --- Chargement des données d'entraînement et de test ---
 load("../Projets/superconductivity_data_train.rda")
 load("../Projets/superconductivity_data_test.rda")
-data_train <- na.omit(data_train)  # Suppression des valeurs manquantes
+data_train <- na.omit(data_train)  # Suppression des lignes contenant des valeurs manquantes (NA)
 data_test <- na.omit(data_test)
 
 
-# 3. Prétraitement : Standardisation des données
-  # Z scoring
-    scale_it = function(x)
-      {
-      out = (x - mean(x)/sd(x))
-      out}
-    
-    scaled_train = data_train
-    for(i in 1:81)
-      {scaled_train[,i] = scale_it(scaled_train[,i])}
-    
-    scaled_test = data_test
-    for(i in 1:81)
-    { scaled_test[,i] = scale_it(scaled_test[,i]) }
+# --- Prétraitement des données : Standardisation ---
+# Fonction pour effectuer une standardisation (z-score)
+scale_it = function(x)
+{
+  out = (x - mean(x)/sd(x))
+  out}
+
+scaled_train = data_train
+for(i in 1:81)
+{scaled_train[,i] = scale_it(scaled_train[,i])}
+
+scaled_test = data_test
+for(i in 1:81)
+{ scaled_test[,i] = scale_it(scaled_test[,i]) }
+
     
 ######################Entrainement et choix du model ############################
 
 
   #--------------------- Modèle linéaire simple-------------------------------------- 
   
-  linear_mod <- lm(critical_temp ~scaled_train$std_atomic_mass ,data = scaled_train)
-  
-  ## visualisation
-  #1 
-  plot(linear_mod$fitted ~ scaled_train$critical_temp , pch = 19,
-       ylab = "predicted critical temp (K)" , xlab = "observed critical temp (K)" )
-  abline(a = 0 , b = 1 , col = "red")
-  #2
-  plot(linear_mod$residuals ~ scaled_train$critical_temp , pch = 19 , 
-       ylab = "residuals" , xlab = "observed critical temp (K)")
-  abline(h = 0 , lty = 2)
-  #3
-  hist(linear_mod$residuals , col = 'grey' , freq = F , xlab = 'Residuals' , main = "")
-  
-  
-  # Prédictions sur l'ensemble de test
-  predictions_linear <- predict(linear_mod, newdata = scaled_test)
-  
-  # pseudo visualisation
-  head(predictions_linear)
-  
-  # vaidation croisee
+  # --- Entraînement et évaluation des modèles ---
+# --- Modèle linéaire simple ---
+linear_mod <- lm(critical_temp ~scaled_train$std_atomic_mass ,data = scaled_train)
+
+# Visualisation des résultats du modèle linéaire
+# Prédictions vs observations
+plot(linear_mod$fitted ~ scaled_train$critical_temp , pch = 19,
+     ylab = "predicted critical temp (K)" , xlab = "observed critical temp (K)" )
+abline(a = 0 , b = 1 , col = "red")
+# Résidus vs observations
+plot(linear_mod$residuals ~ scaled_train$critical_temp , pch = 19 , 
+     ylab = "residuals" , xlab = "observed critical temp (K)")
+abline(h = 0 , lty = 2)
+# Histogramme des résidus
+hist(linear_mod$residuals , col = 'grey' , freq = F , xlab = 'Residuals' , main = "")
+
+
+# Prédictions sur l'ensemble de test
+predictions_linear <- predict(linear_mod, newdata = scaled_test)
+# Affichage des premières prédictions
+head(predictions_linear)
+
+# --- Validation croisée pour évaluer le modèle linéaire ---
+# Boucle pour effectuer une validation croisée avec 20% des données pour le test
   sample_random_num <- 5 # valeur min
   sample_size <- floor(nrow(scaled_train) * 20/100)
   mse <- c()
   for (i in 1:sample_random_num) {
-    # Randomly sample indices for test and training data
     index_for_test_data = sample(1:nrow(scaled_train), size = sample_size)
     tmp_test = scaled_train[index_for_test_data, ]
     tmp_train = scaled_train[-index_for_test_data, ]
     
-    # Build linear regression model correctly
     tmp_model = lm(critical_temp ~ mean_atomic_mass, data = tmp_train)
     
-    # Make predictions ensuring 'tmp_test' matches the model formula
     tmp_y = predict(tmp_model, newdata = tmp_test)
     
-    # Compute MSE
     mse <- c(mse, mean((tmp_y - tmp_test$critical_temp)^2))
     
-    # Print iteration and MSE
     print(c(i, mse[i]))
   }
   
   cat("MSE pour le modèle lineaire simple :", mean(mse), "\n")
 
-  ##### MSE élevée comment améliorer cette erreur
+  ##### MSE élevée comment améliorer cette erreur ??
 
   
-  --------------------------- Modèle avec Spline--------------------------------------   
+  #--------------------------- Modèle avec Spline--------------------------------------   
+# Entraînement d'un modèle de régression avec splines naturelles
+degoffreedom <- 4
+spline_mod <- lm(critical_temp ~ ns(mean_atomic_mass, degoffreedom), data = scaled_train)
 
+summary(spline_mod)
+
+
+# Intervalle de confiance des paramètres estimés
+# Risque à 5 % avec l’intervalle de confiance
+confint(spline_mod)
+
+# Visualisation des résultats du modèle avec spline
+# Prédictions vs observations
+plot(spline_mod$fitted ~ scaled_train$critical_temp , pch = 19,
+     ylab = "predicted critical temp (K)" , xlab = "observed critical temp (K)" )
+abline(a = 0 , b = 1 , col = "red")
+# Résidus vs observations
+plot(spline_mod$residuals ~ scaled_train$critical_temp , pch = 19 , 
+     ylab = "residuals" , xlab = "observed critical temp (K)")
+abline(h = 0 , lty = 2)
+# Histogramme des résidus
+hist(spline_mod$residuals , col = 'grey' , freq = F , xlab = 'Residuals' , main = "")
   
-  degoffreedom <- 4
-  spline_mod <- lm(critical_temp ~ ns(mean_atomic_mass, degoffreedom), data = scaled_train)
   
   
-  # Intervalle de confiance des paramètres estimés
-  # Risque à 5 % avec l’intervalle de confiance
-  confint(spline_mod)
-    
-  #1 
-  plot(spline_mod$fitted ~ scaled_train$critical_temp , pch = 19,
-       ylab = "predicted critical temp (K)" , xlab = "observed critical temp (K)" )
-  abline(a = 0 , b = 1 , col = "red")
-  #2
-  plot(spline_mod$residuals ~ scaled_train$critical_temp , pch = 19 , 
-       ylab = "residuals" , xlab = "observed critical temp (K)")
-  abline(h = 0 , lty = 2)
-  #3
-  hist(spline_mod$residuals , col = 'grey' , freq = F , xlab = 'Residuals' , main = "")
-  
-  
-  summary(spline_mod)
- 
   predictions_spline <- predict(spline_mod, newdata = scaled_test)
 
   head(predictions_spline)
