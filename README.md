@@ -40,8 +40,11 @@ data_test <- na.omit(data_test)
     for(i in 1:81)
     { scaled_test[,i] = scale_it(scaled_test[,i]) }
     
-###### Entrainement et choix du model ############################
+######################Entrainement et choix du model ############################
+
+
   #--------------------- Modèle linéaire simple-------------------------------------- 
+  
   linear_mod <- lm(critical_temp ~scaled_train$std_atomic_mass ,data = scaled_train)
   
   ## visualisation
@@ -59,9 +62,9 @@ data_test <- na.omit(data_test)
   
   # Prédictions sur l'ensemble de test
   predictions_linear <- predict(linear_mod, newdata = scaled_test)
+  
   # pseudo visualisation
   head(predictions_linear)
-  
   
   # vaidation croisee
   sample_random_num <- 5 # valeur min
@@ -89,7 +92,11 @@ data_test <- na.omit(data_test)
   cat("MSE pour le modèle lineaire simple :", mean(mse), "\n")
 
   ##### MSE élevée comment améliorer cette erreur
-  #--------------------- Modèle avec Spline--------------------------------------   
+
+  
+  --------------------------- Modèle avec Spline--------------------------------------   
+
+  
   degoffreedom <- 4
   spline_mod <- lm(critical_temp ~ ns(mean_atomic_mass, degoffreedom), data = scaled_train)
   
@@ -117,7 +124,7 @@ data_test <- na.omit(data_test)
   head(predictions_spline)
 
   
-  # Validation du modèle par validation croisée
+# Validation du modèle par validation croisée
   mse_spline <- c()
   
   for(i in 1 : sample_random_num)
@@ -133,22 +140,15 @@ data_test <- na.omit(data_test)
   
   cat("MSE pour le modèle avec spline :", mean(mse_spline), "\n") 
 
-
-
-
-
-
-
-
-
-## Selection de variables (en utilisant TOUTES les variables)
+# Selection de variables (en utilisant TOUTES les variables) "méthode backward"
 fullLinearReg <- lm(critical_temp~., data=scaled_train)
 back <- step(fullLinearReg, direction="backward", trace = 1)
 formula(back)
 
-#######
-## On remarque que notre modele prend toutes les variables en consideration
-## auucne variable n est prependairante dans la prediction de critical temp 
+# On remarque que notre modèle prend toutes les variables en consideration
+# auucne variable n'est prépendairante dans la prédiction de critical temp 
+
+# Selection de variables (en utilisant TOUTES les variables) "méthode forward"
 
 # null <- lm(critical_temp ~ ., data=scaled_train)
 # forw <- step(null, scope=list(lower=null,upper=fullLinearReg),
@@ -176,28 +176,29 @@ cat("MSE pour apres une regression multiple:", mean(mse_mlt), "\n")
 
 
 
+--------------------------- Modèle foret aleatoire-------------------------------------- 
 
 
-##### Troisieme methode #####
-
-#modele foret aleatoire
 start_time <- Sys.time()  # Temps de début
 
 num_trees <- 81 
 randForest = ranger(critical_temp ~ . , data = scaled_train, mtry = num_trees , min.node.size = 1 , 
                     num.trees = num_trees , importance = "permutation")
-# quelque reprensation des resultat 
+# Représentation des résultats 
 #1
+
 plot(randForest$predictions ~ scaled_train$critical_temp, pch = 19,
      ylab = "predicted critical temperature (K)" , xlab="Observed critical temperatures (K)" )
 abline(a = 0 , b = 1 , col = "red")
 
 #2
+
 rf_residuals=scaled_train$critical_temp-randForest$predictions
 plot(rf_residuals ~ scaled_train$critical_temp, pch = 19,
      ylab = "Residuals (Obs-Pred)", xlab = "Observed critical temperatures (K)")
 abline(h=0 ,lty=2)
 #3
+
 hist(rf_residuals,   col = "grey", freq = FALSE,  xlab = "Residuals", main = "")
 
 # Faire des prédictions
@@ -206,8 +207,7 @@ predictions_rf <- predict(randForest, data = scaled_test)$predictions
 # Afficher les premières prédictions
 head(predictions_rf)
 
-
-
+# calcul de la mse
 mse_rf <- c()
 for(i in 1:sample_random_num)
 {
@@ -238,29 +238,10 @@ print(paste("Temps d'exécution pour random forest sans acp:", execution_time))
 
 
 
+--------------------------- Modèle foret aleatoire avec ACP -------------------------------------- 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#quatrieme approche 
-#on peut utiliser les forets que sur les premieres composante
-#ACP 
+# Application de l'ACP 
 start_time <- Sys.time()  # Temps de début
 
 n<-5 #a choisir ce nombre 
@@ -284,12 +265,10 @@ colnames(ACP_scaled_train)[n+1]<-c("critical_temp")
 
 nb_trees<-100
 mtry<-min(n,10)
-# tmp_model =         ranger(critical_temp ~ .,data = tmp_train , mtry = 10 , num.trees = num_trees , 
-#                    importance = "permutation" , min.node.size = 1) 
 randforest_after_ACP= ranger(critical_temp ~ ., data=ACP_scaled_train, mtry=mtry, min.node.size = 1,
                              num.trees= nb_trees,importance="permutation")
 
-
+# Calcul de la mse
 mse_ACPrf <- c()
 for(i in 1:sample_random_num)
 {
@@ -303,17 +282,12 @@ for(i in 1:sample_random_num)
   mse_ACPrf <- c(mse_ACPrf , mean((tmp_y - tmp_test[,n+1])^2))
   print(c(i,mse_ACPrf[i]))
 }
-
-
 cat("MSE pour le modèle ACP avec forêts aléatoires :", mean(mse_ACPrf), "\n")
-
-
-
 end_time <- Sys.time()  
-
 
 # Calcul du temps d'exécution
 execution_time <- end_time - start_time
+
 print(paste("Temps d'exécution pour randomforest after acp:", execution_time))
 
 
@@ -330,22 +304,13 @@ for (i in 2:n)
   ACP_scaled_test<-cbind(ACP_scaled_test,temp_df)
   colnames(ACP_scaled_test)[i]<-c(paste(c("dim",i), collapse = ""))
 }
-
-# ACP_scaled_test<- cbind(ACP_scaled_test,scaled_test$critical_temp)
-# colnames(ACP_scaled_test)[n+1]<-c("critical_temp")
-
-
-
-
-# Étape 3 : Prédictions sur les données de test
+# Prédictions sur les données de test
 predictions <- predict(randforest_after_ACP, ACP_scaled_test)
 predicted_critical_temp <- predictions$predictions
 
 head(predicted_critical_temp)
 
-# Étape 4 : Sauvegarder les prédictions dans un fichier
+# Sauvegarde des prédictions dans un fichier
 output <- data.frame(ID = 1:nrow(data_test), Predicted_Critical_Temp = predicted_critical_temp)
 write.csv(output, "predicted_critical_temp.csv", row.names = FALSE)
-
-# Afficher un message de confirmation
 cat("Les prédictions ont été sauvegardées dans 'predicted_critical_temp.csv'.\n")
