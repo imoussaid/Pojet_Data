@@ -1,17 +1,17 @@
-## Prédiction de la Température Critique des Supraconducteurs
+# Prédiction de la Température Critique des Supraconducteurs
 Ce projet vise à explorer des méthodes d'apprentissage supervisé afin de prédire la température critique des supraconducteurs à partir de leurs caractéristiques physiques. Il s'inscrit dans une démarche scientifique alliant analyse de données, implémentation de modèles de régression et interprétation des résultats.
 
-# 📅 Période
+## 📅 Période
 Durée : Septembre 2024 – Janvier 2025
-# 🛠️ Technologies Utilisées
+## 🛠️ Technologies Utilisées
 Langage : R
 Techniques d'analyse : Régression, Analyse en Composantes Principales (ACP), Validation Croisée, Bootstrap
-# 📝 Description du Projet
+## 📝 Description du Projet
 Objectifs
 Étude des Variables Explicatives
 Identifier les variables significatives pour prédire la température critique des supraconducteurs grâce à des techniques d'analyse exploratoire et de sélection de variables (ACP, sélection classique).
 
-# Implémentation et Comparaison de Méthodes de Régression
+## Implémentation et Comparaison de Méthodes de Régression
 
 Régression linéaire
 Régression polynomiale
@@ -21,10 +21,10 @@ Combinaisons de modèles
 Validation des Modèles
 Évaluer la robustesse et les performances des modèles à l'aide de méthodes comme la validation croisée et le bootstrap.
 
-# Interprétation des Résultats
+## Interprétation des Résultats
 Analyser les caractéristiques physiques des matériaux (masse atomique, rayon atomique, conductivité thermique, etc.) pour donner du sens aux résultats des modèles.
 
-# 🔬 Méthodologie
+## 🔬 Méthodologie
 Préparation des Données
 
 Nettoyage des données brutes
